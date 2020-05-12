@@ -170,6 +170,7 @@ NOTES:
  *   Max ops: 5
  *   Rating: 1
  */
+//x左移一位再右移一位实现
 int lsbZero(int x) {
     x = x >> 1;
     x = x << 1;
@@ -183,6 +184,7 @@ int lsbZero(int x) {
  *   Max ops: 6
  *   Rating: 2
  */
+//x第n个字节的每一位都与1异或达到取反目的
 int byteNot(int x, int n) {
     int y = 0xff;
     n = n << 3;
@@ -200,6 +202,7 @@ int byteNot(int x, int n) {
  *   Max ops: 20
  *   Rating: 2 
  */
+//将x和y的第n位提取出来并进行异或，然后将结果转换为逻辑1或0
 int byteXor(int x, int y, int n) {
     n = n << 3;
     x = x >> n;
@@ -214,6 +217,7 @@ int byteXor(int x, int y, int n) {
  *   Max ops: 20
  *   Rating: 3 
  */
+//将x、y转换成逻辑0或1后进行与操作。
 int logicalAnd(int x, int y) {
     x = (!!x) & (!!y);
     return x;
@@ -236,6 +240,10 @@ int logicalOr(int x, int y) {
  *   Max ops: 25
  *   Rating: 3 
  */
+/*
+*   取出x右移(32-n)位后再与一个高(32-n)位为0、低n位为1的数相与；
+*   最后和x左移n位后的数相加，从而实现循环左移。
+*/
 int rotateLeft(int x, int n) {
     int y = ~0;
     y = ~(y << n);
@@ -249,6 +257,10 @@ int rotateLeft(int x, int n) {
  *   Max ops: 20
  *   Rating: 4
  */
+/*
+*   将每次得到的数的高一半位与低一半位相异或，然后把最后的结果和1相与，
+*   若有奇数个1，得到的结果则为1；否则为0
+*/
 int parityCheck(int x) {
     int y;
     y = x >> 16;
@@ -269,6 +281,11 @@ int parityCheck(int x) {
  *   Max ops: 20
  *   Rating: 2
  */
+/*
+*   将x与x左移一位后的数相异或再右移31位
+*   若会溢出，则得到的数为0xffffffff，即为-1，不会溢出则为0
+*   故将其加一并返回即可
+*/
 int mul2OK(int x) {
     x = (x ^ (x << 1)) >> 31;
     return 1 + x;
@@ -284,6 +301,10 @@ int mul2OK(int x) {
  *   Max ops: 12
  *   Rating: 2
  */
+/*
+*   将x左移一位再加x实现x*3，因为要向0取整，故为负数时要加一，
+*   所以将得到的x加上其符号位再右移即可。
+*/
 int mult3div2(int x) {
     x = (x << 1) + x;
     x = (x + ((x >> 31) & 1)) >> 1;
@@ -297,6 +318,11 @@ int mult3div2(int x) {
  *   Max ops: 20
  *   Rating: 3
  */
+/*
+*   当x与y的符号位以及x与x-y的符号位均不同时会产生溢出
+*   故将这两处符号位相异或再相与，然后右移31位后与1相与，
+*   最后逻辑取反得到结果。
+*/
 int subOK(int x, int y) {
     x = ((x ^ y) & ((x + ~y + 1) ^ x)) >> 31;
     return !(x & 1);
@@ -309,6 +335,11 @@ int subOK(int x, int y) {
  *   Max ops: 10
  *   Rating: 4
  */
+/*
+*   当x为正数时绝对值为其本身，当x为负数时，将x-1并取反
+*   可得到其绝对值。所以将x加上x右移31为后的值再
+*   与其相异或即可得到其绝对值。
+*/
 int absVal(int x) {
     int y = x >> 31;
     x = (x + y) ^ y;
@@ -325,9 +356,13 @@ int absVal(int x) {
  *   Max ops: 10
  *   Rating: 2
  */
+/*
+*   取出uf的阶码和尾数，若其阶码全为1且尾数不为0，则为NAN；
+*   返回其本身；否则返回与0x7fffffff相与后的结果。
+*/
 unsigned float_abs(unsigned uf) {
-    unsigned a = uf & 0x7FFFFFFF;
-    if (a >= 0x7f800001)
+    unsigned a = uf & 0x7fffffff;
+    if (a > 0x7f800000)
         return uf;
 	//return 0x7fc00000;
     else
@@ -345,6 +380,12 @@ unsigned float_abs(unsigned uf) {
  *   Max ops: 30
  *   Rating: 4
  */
+/*
+*   分别取出uf的阶码和尾数，然后将尾数与0x00800000异或将
+*   隐藏1添加进去，若阶码小于127，则取整为0;若阶码大于158
+*   则返回0x80000000；若符号位为1，则返回尾数移位后的补码，
+*   否则，返回移位后的尾数。
+*/
 int float_f2i(unsigned uf) {
     int expd = (uf & 0x7f800000) >> 23;
     int x = (uf & 0x007fffff) ^ 0x00800000;
@@ -355,14 +396,14 @@ int float_f2i(unsigned uf) {
     if(((uf >> 31) & 1) == 1)
     {
         if(expd > 150)
-            return ~(x << (150 - expd)) + 1;
+            return ~(x << (expd - 150)) + 1;
         else
             return ~(x >> (150 - expd)) + 1;
     }
     else
     {
         if(expd > 150)
-            return x << (150 - expd);
+            return x << (expd - 150);
         else
             return x >> (150 - expd);
     }
